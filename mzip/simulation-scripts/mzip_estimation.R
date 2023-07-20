@@ -1,11 +1,13 @@
-mzip_estimation <- function(main_dir = NULL, parallel = TRUE) {
+mzip_estimation <- function(main_dir = "Untitled", parallel = TRUE) {
 
-	main_dir <- ifelse(is.null(main_dir), "Data", paste0("Data/", main_dir))
+	main_dir <- paste0("~/scratch/Data/", main_dir)
+	cat(sprintf("Estimating %s\n", main_dir))
 
 	if (parallel) {
 		library(parallel)
+
 		ncl <- detectCores()
-		cat(sprintf("Using %d cores\n", ncl))
+		cat(sprintf("\tUsing %d cores\n", ncl))
 	}
 
 	em_fun <- function(i, ipath, G, ...) {
@@ -43,7 +45,6 @@ mzip_estimation <- function(main_dir = NULL, parallel = TRUE) {
 		n <- sort(n[!is.na(n)])
 
 		if (parallel) {
-			# parallel computing
 			cl <- makeForkCluster(ncl)
 			times <- parSapply(cl, n, em_fun, case_dir, G, K, phi, prob, lambda)
 			stopCluster(cl)
@@ -51,13 +52,13 @@ mzip_estimation <- function(main_dir = NULL, parallel = TRUE) {
 			cat(times, file = paste0(case_dir, "/_times.dat"), sep = "\n")
 
 		} else {
-			# single-thread computing
 			times <- sapply(n, em_fun, case_dir, G, K, phi, prob, lambda)
 			cat(times, file = paste0(case_dir, "/_times.dat"), sep = "\n")
 
 		}
 		t1 <- Sys.time()
 
-		cat("\t", length(n), "estimations,", format(round(t1 - t0, 2)), "\n")
+		cat(sprintf("\t%s, %d estimations, %s\n",
+			case, length(n), format(round(t1 - t0, 2))))
 	}
 }

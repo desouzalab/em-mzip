@@ -1,4 +1,4 @@
-llmzip_true <- function(Y, K, phi, lambda, prob) {
+llmzip_true <- function(Y, K, phi, lambda, prob, thresh) {
 
 	bmat <- matrix(nrow = nrow(Y), ncol = K)
 	for (k in 1:K) {
@@ -15,19 +15,22 @@ llmzip_true <- function(Y, K, phi, lambda, prob) {
 	return(list(
 		loglik = ll,
 		z.hat  = z,
-		trick  = FALSE
+		trick  = FALSE,
+	    thresh = thresh
 	))
 }
 
 
-llmzip_trick <- function(Y, K, phi, lambda, prob) {
+llmzip_trick <- function(Y, K, phi, lambda, prob, thresh) {
 	eps <- log(.Machine$double.xmin)
 
 	bmat <- matrix(nrow = nrow(Y), ncol = K)
 	for (k in 1:K) {
 		bk <- dzip(Y, phi[k], rep(lambda[k, ], each = nrow(Y)), log = TRUE)
 		bk <- rowSums(bk)
-		bk[bk == -Inf] <- min(bk[bk > -Inf])
+
+		thresh[k] <- max(thresh[k], min(bk[bk > -Inf]))
+		bk[bk < thresh[k]] <- thresh[k]
 
 		bk <- log(prob[k]) + bk
 		bmat[, k] <- exp(bk / (min(bk) / eps))
@@ -39,25 +42,27 @@ llmzip_trick <- function(Y, K, phi, lambda, prob) {
 	return(list(
 		loglik = ll,
 		z.hat  = z,
-		trick  = TRUE
+		trick  = TRUE,
+		thresh = thresh
 	))
 }
 
 
-llmzip <- function(Y, K, phi, lambda, prob, trick = FALSE) {
+llmzip <- function(Y, K, phi, lambda, prob,
+                   trick = FALSE, thresh = rep(-Inf, K)) {
 
 	if (trick) {
-		return(llmzip_trick(Y, K, phi, lambda, prob))
+		out <- llmzip_trick(Y, K, phi, lambda, prob, thresh)
 
 	} else {
-		out <- llmzip_true(Y, K, phi, lambda, prob)
+		out <- llmzip_true(Y, K, phi, lambda, prob, thresh)
 
 		if (any(is.infinite(out$z.hat), is.nan(out$z.hat),
 				is.infinite(out$loglik), is.nan(out$loglik))) {
-		    warning("Proportial log-likelihhod function")
-			return(llmzip(Y, K, phi, lambda, prob, TRUE))
+		    warning("Proportional log-likelihood function")
+		    out <- llmzip_trick(Y, K, phi, lambda, prob, thresh)
 		}
-
-		return(out)
 	}
+
+	return(out)
 }

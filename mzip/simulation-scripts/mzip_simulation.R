@@ -1,38 +1,23 @@
 mzip_simulation <- function(N, G, K, phi, prob, lambda,
 							S = 10,
 							seed = as.integer(Sys.time()),
-							main_dir = NULL,
+							main_dir = "Untitled",
 							parallel = TRUE) {
-	set.seed(seed)
-	if (parallel) {
-		library(parallel)
-		ncl <- detectCores()
-		cat(sprintf("Using %d cores\n", ncl))
-	}
-
-	main_dir <- ifelse(is.null(main_dir), "Data", paste0("Data/", main_dir))
-
+	main_dir <- paste0("~/scratch/Data/", main_dir)
 	if (!dir.exists(main_dir)) {
-		if (!dir.exists("Data")) {
-			cat("Creating directory Data\n")
-			dir.create("Data")
-		}
 		cat("Creating directory", main_dir, "\n")
 		dir.create(main_dir)
+	}
 
+	n <- list.files(main_dir)
+
+	if (length(n) == 0) {
 		n <- 1
-
 	} else {
 		n <- list.files(main_dir)
-
-		if (length(n) == 0) {
-			n <- 1
-		} else {
-			n <- list.files(main_dir)
-			n <- regmatches(n, regexec("Case ([0-9]+)", n))
-			n <- as.numeric(sapply(n, `[`, 2))
-			n <- max(n, na.rm = TRUE) + 1
-		}
+		n <- regmatches(n, regexec("Case ([0-9]+)", n))
+		n <- as.numeric(sapply(n, `[`, 2))
+		n <- max(n, na.rm = TRUE) + 1
 	}
 
 	file_dir <- paste0(main_dir, "/Case ", n)
@@ -54,6 +39,10 @@ mzip_simulation <- function(N, G, K, phi, prob, lambda,
 	sink()
 
 	if (parallel) {
+		library(parallel)
+		ncl <- detectCores()
+		cat(sprintf("\tUsing %d cores\n", ncl))
+
 		simfun <- function(j) {
 			files <- paste0(file_dir, "/Data ", j, " ", c("Y", "Z", "U"), ".dat")
 
@@ -71,6 +60,8 @@ mzip_simulation <- function(N, G, K, phi, prob, lambda,
 		t1 <- Sys.time()
 
 	} else{
+		set.seed(seed)
+
 		t0 <- Sys.time()
 		for (j in 1:S) {
 			files <- paste0(file_dir, "/Data ", j, " ", c("Y", "Z", "U"), ".dat")
@@ -84,5 +75,6 @@ mzip_simulation <- function(N, G, K, phi, prob, lambda,
 	}
 
 
-	cat("\t", S, "simulations saved,", format(round(t1 - t0, 2)), "\n")
+	cat(sprintf("\t%d simulations saved, %s\n",
+		S, format(round(t1 - t0, 2))))
 }

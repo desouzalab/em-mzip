@@ -1,10 +1,12 @@
-mzip_summary <- function(main_dir = NULL, estim = c("iter", "phi",
-						 "prob", "times", "lambda")) {
+mgzip_summary <- function(main_dir = NULL,
+	estim = c("times", "iter", "phi", "prob", "rho", "beta0")) {
 
-	main_dir <- ifelse(is.null(main_dir), "Data", paste0("Data/", main_dir))
+	if (is.null(main_dir)) {
+		main_dir <- "Data"
+	}
 
 	times <- "times" %in% estim
-	estim <- estim[estim %in% c("iter", "loglik", "phi", "prob", "lambda")]
+	estim <- estim[estim %in% c("iter", "loglik", "phi", "prob", "rho", "beta0")]
 
 	mat <- list()
 	cases <- list.files(main_dir)
@@ -29,15 +31,36 @@ mzip_summary <- function(main_dir = NULL, estim = c("iter", "phi",
 			}))
 		}
 
-		if ("lambda" %in% estim) {
-			vlambda <- as.numeric(t(lambda))
-			k <- rep(1:nrow(lambda), each = ncol(lambda))
-			vl <- sort(unique(vlambda))
-			mse <- rowMeans((t(mat$lambda[[case]]) - vlambda) ^ 2)
+		if ("rho" %in% estim) {
+			vrho <- as.numeric(t(rho))
+			k <- rep(1:nrow(rho), each = ncol(rho))
+			mse <- rowMeans((t(mat$rho[[case]]) - vrho) ^ 2)
 			mse <- tapply(mse, k, mean)
 
-			mat$lambda[[case]] <- mse
+			mad <- apply(abs(t(mat$rho[[case]]) - vrho), 1, median)
+			mad <- tapply(mad, k, median)
+
+			mat$rho[[case]] <- mse
+			mat$rho_mad[[case]] <- mad
 		}
+
+		if ("beta0" %in% estim) {
+			vbeta0 <- as.numeric(t(beta0))
+			vb <- sort(unique(vbeta0))
+			k <- sapply(beta0, function(x)which(vb == x))
+
+			mse <- colMeans((mat$beta0[[case]] - vbeta0) ^ 2)
+			mse <- tapply(mse, k, mean)
+			names(mse) <- vb
+
+			mad <- apply(abs(mat$beta0[[case]] - vbeta0), 2, median)
+			mad <- tapply(mad, k, median)
+			names(mad) <- vb
+
+			mat$beta0[[case]] <- mse
+			mat$beta0_mad[[case]] <- mad
+		}
+
 	}
 
 	if (times) {
@@ -69,20 +92,17 @@ mzip_summary <- function(main_dir = NULL, estim = c("iter", "phi",
 	return(mat)
 }
 
-mzip_summary_Z <- function(main_dir = NULL) {
-	# clevr
-	library(FDRSeg)
-	# main_dir = "Scenario 1"
 
-	main_dir <- ifelse(is.null(main_dir), "Data", paste0("Data/", main_dir))
+mgzip_summary_Z <- function(main_dir = NULL) {
+	if (is.null(main_dir)) {
+		main_dir <- "Data"
+	}
 
 	Vmat <- list()
 	cases <- list.files(main_dir)
 
 	for (case in cases) {
-		# case = cases[1]
 		case_dir <- paste0(main_dir, "/", case)
-		# source(paste0(case_dir, "/_Parameters.txt"))
 
 		n <- list.files(case_dir)
 		n <- regmatches(n, regexec("Data ([0-9]+) Y.dat", n))
@@ -115,4 +135,3 @@ mzip_summary_Z <- function(main_dir = NULL) {
 
 	return(Vmat)
 }
-

@@ -1,5 +1,3 @@
-
-# Simulate the Data ----
 rmzip <- function(N, G, K, phi, prob, lambda) {
 
 	# 1. Generate Z vector, cluster assignments
@@ -9,8 +7,6 @@ rmzip <- function(N, G, K, phi, prob, lambda) {
 	U <- matrix(rbinom(n = N * G, size = 1, prob = phi[Z]), N, G)
 
 	# 3. Generate Y
-	# Y <- matrix(rpois(n = N * G, lambda = lambda[Z, ]), N, G)
-	# Y[U == 1] <- 0
 	Y <- matrix(0, N, G)
 	Y[U == 0] <- rpois(n = sum(U == 0), lambda = lambda[Z, ][U == 0])
 
